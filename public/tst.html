@@ -1,0 +1,63 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>Undo and Redo</title>
+
+<script type="text/javascript" src="https://public.tableau.com/javascripts/api/tableau-2.min.js"></script>
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"> </script>
+
+<script type="text/javascript" >
+var viz;
+function initViz() {
+    var containerDiv = document.getElementById("vizContainer"),
+    url = "http://public.tableau.com/views/RegionalSampleWorkbook/Storms",
+    options = {
+        hideTabs: false,
+        hideToolbar: true,
+        onFirstInteractive: function () {
+		    // Listen for toolbar events
+            viz.addEventListener(tableau.TableauEventName.TOOLBAR_STATE_CHANGE, onToolbarStateChange);
+        }
+    };
+	viz = new tableau.Viz(containerDiv, url, options); 
+}                
+                				
+function onToolbarStateChange(toolbarEvent) {
+    // when event occurs, get state and update custom buttons
+    var toolbarState = toolbarEvent.getToolbarState();
+    updateToolbarState(toolbarState)
+}
+
+function updateToolbarState(toolbarState) {
+    $('#undoButton').prop('disabled', !toolbarState.isButtonEnabled(tableau.ToolbarButtonName.UNDO));
+    $('#redoButton').prop('disabled', !toolbarState.isButtonEnabled(tableau.ToolbarButtonName.REDO));
+}
+   
+
+function redo() {
+    viz.redoAsync().then(function(t) {
+        console.log("redo");
+	});
+}
+
+function undo() {
+    viz.undoAsync().then(function(t) {
+        console.log("undo");
+	});
+}
+
+</script>
+</head>
+
+<body onload="initViz() ;">
+    <div id="undoRedo">
+    <button id="undoButton" onclick="undo()" class="btn" disabled>Undo</button>
+    <button id="redoButton" onclick="redo()" class="btn" disabled>Redo</button>		
+    </div>
+    <div id="vizContainer" style="width:800px; height:700px;"></div> 
+        <br />
+</body>
+</html>								
+			

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>RiskHub</title>
+    <script type="text/javascript" src="https://public.tableau.com/javascripts/api/tableau-2.2.2.min.js"></script>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"> </script>
+
+    <script type="text/javascript">
+     var viz;
+        function initViz() {
+            var containerDiv = document.getElementById("vizContainer"),
+                url =
+                    "https://public.tableau.com/views/DeskCreditReportUAT/CreditReport?:embed=y&:display_count=yes",
+                    options = {
+                    hideTabs: false,
+                    hideToolbar: true,
+                    onFirstInteractive: function () {
+                        // Listen for toolbar events
+                        console.log("Run this code when the viz has finished loading.");
+                        worksheet = viz.getWorkbook().getActiveSheet().getWorksheets();
+                        viz.addEventListener(tableau.TableauEventName.TOOLBAR_STATE_CHANGE, onToolbarStateChange);
+                        viz.addEventListener(tableau.TableauEventName.PARAMETER_VALUE_CHANGE, onParameterChange);
+                        viz.addEventListener(tableau.TableauEventName.MARKS_SELECTION, onMarkSelection);
+                    }
+                };
+            viz = new tableau.Viz(containerDiv, url, options);
+        }
+
+        function onToolbarStateChange(toolbarEvent) {
+            // when event occurs, get state and update custom buttons
+            var toolbarState = toolbarEvent.getToolbarState();
+            updateToolbarState(toolbarState)
+        }
+
+        function updateToolbarState(toolbarState) {
+            $('#undoButton').prop('disabled', !toolbarState.isButtonEnabled(tableau.ToolbarButtonName.UNDO));
+            $('#redoButton').prop('disabled', !toolbarState.isButtonEnabled(tableau.ToolbarButtonName.REDO));
+        }
+
+
+        function redo() {
+            viz.redoAsync().then(function (t) {
+                console.log("redo");
+            });
+        }
+
+        function undo() {
+            viz.undoAsync().then(function (t) {
+                console.log("undo");
+            });
+        }
+
+        function onParameterChange(parameterEvent) {
+            return parameterEvent.getParameterAsync().then(function (m) {
+                console.log("[Event] Parameter selection, " + " parameter " + m.getCurrentValue().value);
+            })
+        };
+
+
+        function onMarkSelection(marksEvent) {
+            return marksEvent.getMarksAsync().then(function (m) {
+                console.log("[Event] Marks selection, " + m.length + " marks");
+                console.log(m);
+                if (m.length == 0) {
+                    //Either unselecting the mark or
+                    handleClearedSelection(m);
+                    return;
+                }
+                reportSelectedMarks(m);
+
+                // (reportSelectedMarks);
+            });
+        }
+
+        function reportSelectedMarks(marks) {
+            for (var markindex = 0; markindex < marks.length; markindex++) {
+                var pairs = marks[markindex].getPairs()
+            }
+            pairs1 = JSON.stringify(pairs)
+            fin.desktop.InterApplicationBus.send('app2-uuid', 'pairs1', pairs1);
+        }
+
+        fin.desktop.InterApplicationBus.subscribe('app2-uuid', 'pairs2', (msg, uuid, name) => {
+            console.log("The application:");
+            value2 = JSON.parse(msg)
+            console.log("The application:" + " " + uuid + " " + msg);
+            value2 = JSON.parse(msg)
+            for (var i = 0; i < worksheet.length; i++) {
+                for (var pairindex = 0; pairindex < value2.length; pairindex++) {
+                    worksheet[i].selectMarksAsync(value2[pairindex].fieldName, value2[pairindex].formattedValue,
+                        tableau.SelectionUpdateType.REPLACE)
+                }
+            }
+            // event.stopImmediatePropagation()
+        });
+
+        const app2 = new fin.desktop.Application({
+            uuid: 'app2-uuid',
+            name: 'app2',
+            url: 'http://localhost:5555/index2.html',
+            autoShow: true
+        }, () => {
+            app2.run();
+        })
+    </script>
+
+</head>
+
+
+<body onload="initViz() ;">
+    <div id="undoRedo">
+        <button id="undoButton" onclick="undo()" class="btn" disabled>Undo</button>
+        <button id="redoButton" onclick="redo()" class="btn" disabled>Redo</button>
+    </div>
+    <div id="vizContainer" style="width:800px; height:700px;"></div>
+    <br />
+</body>
+
+</html>
