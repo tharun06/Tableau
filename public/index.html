@@ -16,80 +16,82 @@
                     hideTabs: false,
                     hideToolbar: true,
                     onFirstInteractive: function () {
-                        // Listen for toolbar events
                         console.log("Run this code when the viz has finished loading.");
                         worksheet = viz.getWorkbook().getActiveSheet().getWorksheets();
-                        viz.addEventListener(tableau.TableauEventName.TOOLBAR_STATE_CHANGE, onToolbarStateChange);
+                        viz.addEventListener(tableau.TableauEventName.MARKS_SELECTION,
+                            onMarkSelection);
+                        viz.addEventListener(tableau.TableauEventName.TOOLBAR_STATE_CHANGE,
+                            onToolbarStateChange);
                         viz.addEventListener(tableau.TableauEventName.PARAMETER_VALUE_CHANGE, onParameterChange);
-                        viz.addEventListener(tableau.TableauEventName.MARKS_SELECTION, onMarkSelection);
+                        // viz.addEventListener('filterchange', function (event) {
+                        //     alert("FILTER CHANGE");
+                        //     console.log(event);
+                        // });
                     }
                 };
             viz = new tableau.Viz(containerDiv, url, options);
         }
-
-        function onToolbarStateChange(toolbarEvent) {
+        onToolbarStateChange = (toolbarEvent) => {
             // when event occurs, get state and update custom buttons
             var toolbarState = toolbarEvent.getToolbarState();
             updateToolbarState(toolbarState)
         }
-
-        function updateToolbarState(toolbarState) {
+        updateToolbarState = (toolbarState) => {
             $('#undoButton').prop('disabled', !toolbarState.isButtonEnabled(tableau.ToolbarButtonName.UNDO));
             $('#redoButton').prop('disabled', !toolbarState.isButtonEnabled(tableau.ToolbarButtonName.REDO));
         }
-
-
-        function redo() {
+        redo = () => {
             viz.redoAsync().then(function (t) {
                 console.log("redo");
             });
         }
-
-        function undo() {
+        undo = () => {
             viz.undoAsync().then(function (t) {
                 console.log("undo");
             });
         }
-
-        function onParameterChange(parameterEvent) {
+        onParameterChange = (parameterEvent) => {
             return parameterEvent.getParameterAsync().then(function (m) {
                 console.log("[Event] Parameter selection, " + " parameter " + m.getCurrentValue().value);
             })
         };
-
-
-        function onMarkSelection(marksEvent) {
+        clearSelection = () => {
+            fin.desktop.InterApplicationBus.send('app2-uuid', 'reset button clicked', 'button has been clicked');
+            for (var i = 0; i < worksheet.length; i++) {
+                worksheet[i].clearSelectedMarksAsync();
+            }
+        }
+        onMarkSelection = (marksEvent) => {
             return marksEvent.getMarksAsync().then(function (m) {
                 console.log("[Event] Marks selection, " + m.length + " marks");
                 console.log(m);
                 if (m.length == 0) {
                     //Either unselecting the mark or
-                    handleClearedSelection(m);
+                    // handleClearedSelection(m);
                     return;
                 }
                 reportSelectedMarks(m);
-
-                // (reportSelectedMarks);
             });
-        }
-
-        function reportSelectedMarks(marks) {
+        };
+        reportSelectedMarks = (marks) => {
             for (var markindex = 0; markindex < marks.length; markindex++) {
                 var pairs = marks[markindex].getPairs()
             }
-            pairs1 = JSON.stringify(pairs)
-            fin.desktop.InterApplicationBus.send('app2-uuid', 'pairs1', pairs1);
+            console.log(JSON.stringify(marks, null, 4));
+            console.log(JSON.parse(JSON.stringify(marks)))
+            fin.desktop.InterApplicationBus.send('app2-uuid', 'pairs', pairs);
+            fin.desktop.InterApplicationBus.unsubscribe('app2-uuid', 'pairs2', pairs2 => {
+                return;
+            });
         }
-
         fin.desktop.InterApplicationBus.subscribe('app2-uuid', 'pairs2', (msg, uuid, name) => {
             console.log("The application:");
             value2 = JSON.parse(msg)
             console.log("The application:" + " " + uuid + " " + msg);
-            value2 = JSON.parse(msg)
             for (var i = 0; i < worksheet.length; i++) {
                 for (var pairindex = 0; pairindex < value2.length; pairindex++) {
                     worksheet[i].selectMarksAsync(value2[pairindex].fieldName, value2[pairindex].formattedValue,
-                        tableau.SelectionUpdateType.REPLACE)
+                        tableau.SelectionUpdateType.ADD)
                 }
             }
             // event.stopImmediatePropagation()
@@ -103,15 +105,14 @@
         }, () => {
             app2.run();
         })
-    </script>
-
+   </script>
 </head>
 
-
 <body onload="initViz() ;">
-    <div id="undoRedo">
+    <div>
         <button id="undoButton" onclick="undo()" class="btn" disabled>Undo</button>
         <button id="redoButton" onclick="redo()" class="btn" disabled>Redo</button>
+        <button id="ResetButton" onclick="clearSelection()" class="btn">Reset</button>
     </div>
     <div id="vizContainer" style="width:800px; height:700px;"></div>
     <br />
