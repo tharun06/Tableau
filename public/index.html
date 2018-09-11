@@ -31,35 +31,14 @@
                 };
             viz = new tableau.Viz(containerDiv, url, options);
         }
-        onToolbarStateChange = (toolbarEvent) => {
-            // when event occurs, get state and update custom buttons
-            var toolbarState = toolbarEvent.getToolbarState();
-            updateToolbarState(toolbarState)
-        }
-        updateToolbarState = (toolbarState) => {
-            $('#undoButton').prop('disabled', !toolbarState.isButtonEnabled(tableau.ToolbarButtonName.UNDO));
-            $('#redoButton').prop('disabled', !toolbarState.isButtonEnabled(tableau.ToolbarButtonName.REDO));
-        }
-        redo = () => {
-            viz.redoAsync().then(function (t) {
-                console.log("redo");
-            });
-        }
-        undo = () => {
-            viz.undoAsync().then(function (t) {
-                console.log("undo");
-            });
-        }
-        onParameterChange = (parameterEvent) => {
-            return parameterEvent.getParameterAsync().then(function (m) {
-                console.log("[Event] Parameter selection, " + " parameter " + m.getCurrentValue().value);
-            })
-        };
+
+      fin.desktop.InterApplicationBus.subscribe('app2-uuid', 'reset button clicked', msg => {
+            viz.revertAllAsync();
+        });
         clearSelection = () => {
-            fin.desktop.InterApplicationBus.send('app2-uuid', 'reset button clicked', 'button has been clicked');
-            for (var i = 0; i < worksheet.length; i++) {
-                worksheet[i].clearSelectedMarksAsync();
-            }
+            fin.desktop.InterApplicationBus.send('app2-uuid', 'reset button clicked',
+                'button has been clicked');
+            viz.revertAllAsync();
         }
         onMarkSelection = (marksEvent) => {
             return marksEvent.getMarksAsync().then(function (m) {
@@ -110,8 +89,6 @@
 
 <body onload="initViz() ;">
     <div>
-        <button id="undoButton" onclick="undo()" class="btn" disabled>Undo</button>
-        <button id="redoButton" onclick="redo()" class="btn" disabled>Redo</button>
         <button id="ResetButton" onclick="clearSelection()" class="btn">Reset</button>
     </div>
     <div id="vizContainer" style="width:800px; height:700px;"></div>
