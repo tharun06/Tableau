@@ -19,43 +19,19 @@
                         worksheet = viz.getWorkbook().getActiveSheet().getWorksheets();
                         viz.addEventListener(tableau.TableauEventName.TOOLBAR_STATE_CHANGE,
                             onToolbarStateChange);
-                        viz.addEventListener(tableau.TableauEventName.PARAMETER_VALUE_CHANGE, onParameterChange);
+     
                         viz.addEventListener(tableau.TableauEventName.MARKS_SELECTION, onMarkSelection);
                     }
                 };
             viz = new tableau.Viz(containerDiv, url, options);
         }
-        onToolbarStateChange = (toolbarEvent) => {
-            // when event occurs, get state and update custom buttons
-            var toolbarState = toolbarEvent.getToolbarState();
-            updateToolbarState(toolbarState)
-        }
-        updateToolbarState = (toolbarState) => {
-            $('#undoButton').prop('disabled', !toolbarState.isButtonEnabled(tableau.ToolbarButtonName.UNDO));
-            $('#redoButton').prop('disabled', !toolbarState.isButtonEnabled(tableau.ToolbarButtonName.REDO));
-        }
-        redo = () => {
-            viz.redoAsync().then(function (t) {
-                console.log("redo");
-            });
-        }
-        undo = () => {
-            viz.undoAsync().then(function (t) {
-                console.log("undo");
-            });
-        }
-        onParameterChange = (parameterEvent) => {
-            return parameterEvent.getParameterAsync().then(function (m) {
-                console.log("[Event] Parameter selection, " + " parameter " + m.getCurrentValue().value);
-            })
-        };
+       
         fin.desktop.InterApplicationBus.subscribe('app1-uuid', 'reset button clicked', (msg, uuid, name) => {
-            clearSelection();
+            viz.revertAllAsync();
         });
         clearSelection = () => {
-            for (var i = 0; i < worksheet.length; i++) {
-                worksheet[i].clearSelectedMarksAsync();
-            }
+            fin.desktop.InterApplicationBus.send('app1-uuid', 'reset button clicked', 'button has been clicked');
+            viz.revertAllAsync();
         }
         onMarkSelection = (marksEvent) => {
             console.log(marksEvent.getEventName());
@@ -77,10 +53,8 @@
             pairs2 = JSON.stringify(pairs)
             console.log(pairs2)
             fin.desktop.InterApplicationBus.send('app1-uuid', 'pairs2', pairs2);
-            fin.desktop.InterApplicationBus.unsubscribe('app1-uuid', 'pairs', pairs => {
-                return;
-            });
         };
+        
         fin.desktop.InterApplicationBus.subscribe('app1-uuid', 'pairs', (msg, uuid, name) => {
             console.log(msg);
             console.log(JSON.stringify(msg, null, 4))
@@ -92,15 +66,13 @@
                         tableau.SelectionUpdateType.ADD)
                 }
             }
-            //event.stopImmediatePropagation()
+ 
         });
     </script>
 </head>
 
 <body onload="initViz() ;">
     <div>
-        <button id="undoButton" onclick="undo()" class="btn" disabled>Undo</button>
-        <button id="redoButton" onclick="redo()" class="btn" disabled>Redo</button>
         <button id="ResetButton" onclick="clearSelection()" class="btn">Reset</button>
     </div>
     <div id="vizContainer" style="width:800px; height:700px;"></div>
